@@ -61,6 +61,20 @@ class VectorStore:
 
         return result.get("documents", [])
 
+    def get_representative_chunks(self, filename, k=40):
+        """Retourne jusqu'à k chunks répartis sur tout le document
+        (début, milieu, fin) plutôt que les k premiers seulement —
+        utile pour un quiz qui doit couvrir l'ensemble du contenu,
+        pas juste les premières pages."""
+        all_chunks = self.get_document_chunks(filename)
+
+        if len(all_chunks) <= k:
+            return all_chunks
+
+        step = len(all_chunks) / k
+        indices = [int(i * step) for i in range(k)]
+        return [all_chunks[i] for i in indices]
+
     def delete_document(self, filename):
 
         result = self.db.get(
@@ -74,16 +88,5 @@ class VectorStore:
         if ids:
             self.db.delete(ids=ids)
 
-    def get_representative_chunks(self, filename, k=40):
-
-     docs = self.db.max_marginal_relevance_search(
-        "Résumé complet du document",
-        k=k,
-        fetch_k=max(k * 3, 60),
-        lambda_mult=0.4,
-        filter={"doc_id": filename},
-    )
-
-     return [doc.page_content for doc in docs]
 
 vector_store = VectorStore()

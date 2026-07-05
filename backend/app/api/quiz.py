@@ -6,9 +6,9 @@ router = APIRouter(
     tags=["Quiz"]
 )
 
+
 @router.post("/{filename}")
 def quiz(filename: str):
-
     print("====== QUIZ API ======")
     print(filename)
 
