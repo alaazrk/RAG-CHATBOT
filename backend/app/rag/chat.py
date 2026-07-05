@@ -1,10 +1,9 @@
-import re
-
 from langchain_groq import ChatGroq
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.messages import SystemMessage, HumanMessage
 
 from app.config import GROQ_API_KEY, GROQ_MODEL
 from app.rag.vector_store import vector_store
+from app.rag.llm_utils import invoke_with_continuation
 
 llm = ChatGroq(
     api_key=GROQ_API_KEY,
@@ -30,19 +29,6 @@ I couldn't find that information in the uploaded documents.
 Always answer in the same language as the user's question.
 """
 
-CONTINUE_INSTRUCTION = (
-    "Continue exactly where you left off. Do not repeat any earlier text, "
-    "do not restart the sentence or the section, do not say 'continuing' or "
-    "similar — just carry on seamlessly as if there had been no interruption."
-)
-
-# Sécurité pour éviter une boucle infinie si Groq ne signale jamais la fin
-MAX_CONTINUATIONS = 4
-
-
-def _clean(text: str) -> str:
-    return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
-
 
 def ask_question(question: str, filename: str = None):
     docs = vector_store.similarity_search(question, k=6, filename=filename)
@@ -62,21 +48,7 @@ Question:
         HumanMessage(content=user_prompt),
     ]
 
-    response = llm.invoke(messages)
-    full_text = response.content
-    finish_reason = response.response_metadata.get("finish_reason")
-
-    continuations = 0
-    while finish_reason == "length" and continuations < MAX_CONTINUATIONS:
-        messages.append(AIMessage(content=response.content))
-        messages.append(HumanMessage(content=CONTINUE_INSTRUCTION))
-
-        response = llm.invoke(messages)
-        full_text += response.content
-        finish_reason = response.response_metadata.get("finish_reason")
-        continuations += 1
-
-    answer = _clean(full_text)
+    answer = invoke_with_continuation(llm, messages, label="chat")
 
     return {
         "answer": answer,

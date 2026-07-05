@@ -9,6 +9,7 @@ from app.api.delete_document import router as delete_document_router
 from app.api.health import router as health_router
 from app.api.resume import router as resume_router
 from app.api.quiz import router as quiz_router
+from app.api.auth import router as auth_router
 
 app = FastAPI(title="AI RAG Chatbot")
 
@@ -30,6 +31,7 @@ app.include_router(delete_document_router)
 app.include_router(health_router)
 app.include_router(resume_router)
 app.include_router(quiz_router)
+app.include_router(auth_router)
 
 # Expose le dossier des PDF uploadés pour permettre leur téléchargement
 # depuis le frontend (bouton "Télécharger" dans l'en-tête du document).
