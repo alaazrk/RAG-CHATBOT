@@ -1,15 +1,18 @@
 import { useState, useRef, useEffect } from "react";
-import { MessageSquare, AlignLeft, Download, MoreVertical, FileText, Trash2 } from "lucide-react";
+import { GoogleLogin } from "@react-oauth/google";
+import { MessageSquare, AlignLeft, Brain, Download, MoreVertical, FileText, Trash2, LogOut } from "lucide-react";
 import { colors, nowTime, formatSize } from "./config";
-import { uploadDocument, sendChatMessage, listDocuments, summarizeDocument, deleteDocument } from "./services/api";
+import { uploadDocument, sendChatMessage, listDocuments, summarizeDocument, deleteDocument, generateQuiz } from "./services/api";
+import { loginWithGoogle } from "./services/auth";
+import { jwtDecode } from "jwt-decode";
 import Sidebar from "./components/Sidebar";
 import ChatView from "./components/ChatView";
 import ResumeView from "./components/ResumeView";
 import QuizView from "./components/QuizView";
-import { generateQuiz } from "./services/api";
 
 const SUMMARY_CACHE_KEY = "pdf-assistant-summaries";
 const CHAT_HISTORY_KEY = "pdf-assistant-chat-history";
+const USER_KEY = "pdf-assistant-user";
 
 function loadSummaryCache() {
   try {
@@ -37,12 +40,29 @@ function saveChatHistory(history) {
     localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(history));
   } catch {}
 }
+function loadUser() {
+  try {
+    const raw = localStorage.getItem(USER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+function saveUser(user) {
+  try {
+    if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
+    else localStorage.removeItem(USER_KEY);
+  } catch {}
+}
 
 export default function App() {
   const [documents, setDocuments] = useState([]);
   const [selectedDoc, setSelectedDoc] = useState(null);
-  const [mainTab, setMainTab] = useState("chat"); // 'chat' | 'resume'
+  const [mainTab, setMainTab] = useState("chat"); // 'chat' | 'resume' | 'quiz'
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const [user, setUser] = useState(() => loadUser());
+
   const [messages, setMessages] = useState([
     {
       role: "assistant",
@@ -62,7 +82,6 @@ export default function App() {
 
   const [history, setHistory] = useState(() => loadChatHistory());
 
-  
   const fileInputRef = useRef(null);
   const scrollRef = useRef(null);
 
@@ -82,6 +101,39 @@ export default function App() {
       setDocuments([]);
     }
   }
+
+  // --------- Connexion Google ---------
+
+  async function handleLoginSuccess(credentialResponse) {
+    try {
+      const userInfo = await loginWithGoogle(credentialResponse.credential);
+      setUser(userInfo);
+      saveUser(userInfo);
+    } catch {
+      // Si le backend est injoignable, on retombe sur les infos décodées
+      // directement depuis le token Google (moins sûr, mais permet de
+      // continuer à utiliser l'app hors-ligne du backend d'auth).
+      try {
+        const decoded = jwtDecode(credentialResponse.credential);
+        const fallbackUser = { email: decoded.email, name: decoded.name, picture: decoded.picture };
+        setUser(fallbackUser);
+        saveUser(fallbackUser);
+      } catch {
+        alert("Connexion Google impossible pour le moment.");
+      }
+    }
+  }
+
+  function handleLoginError() {
+    alert("La connexion Google a échoué. Réessaie.");
+  }
+
+  function handleLogout() {
+    setUser(null);
+    saveUser(null);
+  }
+
+  // --------- PDF ---------
 
   async function handleUploadPdf(file) {
     if (!file || file.type !== "application/pdf") return;
@@ -145,27 +197,17 @@ export default function App() {
   }
 
   async function runQuiz(filename) {
-
-  setIsGeneratingQuiz(true);
-  setQuiz(null);
-
-  try {
-
-    const data = await generateQuiz(filename);
-
-    setQuiz(data);
-
-  } catch {
-
-    alert("Impossible de générer le quiz.");
-
-  } finally {
-
-    setIsGeneratingQuiz(false);
-
+    setIsGeneratingQuiz(true);
+    setQuiz(null);
+    try {
+      const data = await generateQuiz(filename);
+      setQuiz(data);
+    } catch {
+      alert("Impossible de générer le quiz.");
+    } finally {
+      setIsGeneratingQuiz(false);
+    }
   }
-
- }
 
   async function sendMessage() {
     const text = input.trim();
@@ -266,58 +308,98 @@ export default function App() {
             </div>
           </div>
 
-          {selectedDoc && (
-            <div className="flex items-center gap-1 relative flex-shrink-0">
-              <a
-                href={`http://localhost:8000/files/${encodeURIComponent(selectedDoc.name)}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  window.open(
-                    `http://localhost:8000/files/${encodeURIComponent(selectedDoc.name)}`,
-                    "_blank"
-                  );
-                }}
-                style={{ color: colors.textFaint }}
-                className="p-2 rounded-lg hover:text-white hover:bg-white/5 transition-colors"
-                title="Télécharger le PDF"
-              >
-                <Download size={16} />
-              </a>
-              <button
-                onClick={() => setMenuOpen((v) => !v)}
-                style={{ color: colors.textFaint }}
-                className="p-2 rounded-lg hover:text-white hover:bg-white/5 transition-colors"
-              >
-                <MoreVertical size={16} />
-              </button>
-              {menuOpen && (
-                <div
-                  style={{ backgroundColor: colors.bgPanel, border: `1px solid ${colors.border}` }}
-                  className="absolute right-0 top-11 rounded-lg shadow-lg py-1 w-44 z-10"
-                >
-                  <button
-                    onClick={() => {
-                      if (window.confirm(`Supprimer "${selectedDoc.name}" ?`)) {
-                        handleDeleteDocument(selectedDoc.name);
-                      }
-                    }}
-                    style={{ color: colors.danger }}
-                    className="w-full text-left px-3 py-2 text-[13px] flex items-center gap-2 hover:bg-white/5"
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {!user && (
+              <GoogleLogin
+                onSuccess={handleLoginSuccess}
+                onError={handleLoginError}
+                theme="filled_black"
+                size="medium"
+                text="signin"
+                shape="pill"
+              />
+            )}
+            {user && (
+              <div className="flex items-center gap-2">
+                {user.picture ? (
+                  <img src={user.picture} alt={user.name} className="w-8 h-8 rounded-full" />
+                ) : (
+                  <div
+                    style={{ backgroundColor: colors.accentSoft }}
+                    className="w-8 h-8 rounded-full flex items-center justify-center"
                   >
-                    <Trash2 size={13} /> Supprimer
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+                    <span style={{ color: colors.accent }} className="text-xs font-semibold">
+                      {user.name?.[0]?.toUpperCase() || "?"}
+                    </span>
+                  </div>
+                )}
+                <span style={{ color: colors.textPrimary }} className="text-[13px] font-medium hidden sm:inline">
+                  {user.name}
+                </span>
+                <button
+                  onClick={handleLogout}
+                  style={{ color: colors.textFaint }}
+                  className="p-1.5 rounded-md hover:text-red-400"
+                  title="Se déconnecter"
+                >
+                  <LogOut size={15} />
+                </button>
+              </div>
+            )}
+
+            {selectedDoc && (
+              <div className="flex items-center gap-1 relative">
+                <a
+                  href={`http://localhost:8000/files/${encodeURIComponent(selectedDoc.name)}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.open(
+                      `http://localhost:8000/files/${encodeURIComponent(selectedDoc.name)}`,
+                      "_blank"
+                    );
+                  }}
+                  style={{ color: colors.textFaint }}
+                  className="p-2 rounded-lg hover:text-white hover:bg-white/5 transition-colors"
+                  title="Télécharger le PDF"
+                >
+                  <Download size={16} />
+                </a>
+                <button
+                  onClick={() => setMenuOpen((v) => !v)}
+                  style={{ color: colors.textFaint }}
+                  className="p-2 rounded-lg hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  <MoreVertical size={16} />
+                </button>
+                {menuOpen && (
+                  <div
+                    style={{ backgroundColor: colors.bgPanel, border: `1px solid ${colors.border}` }}
+                    className="absolute right-0 top-11 rounded-lg shadow-lg py-1 w-44 z-10"
+                  >
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Supprimer "${selectedDoc.name}" ?`)) {
+                          handleDeleteDocument(selectedDoc.name);
+                        }
+                      }}
+                      style={{ color: colors.danger }}
+                      className="w-full text-left px-3 py-2 text-[13px] flex items-center gap-2 hover:bg-white/5"
+                    >
+                      <Trash2 size={13} /> Supprimer
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Onglets Chat / Résumé */}
+        {/* Onglets Chat / Résumé / Quiz */}
         <div className="flex items-center gap-2 px-6 py-3 flex-shrink-0">
           {[
             { id: "chat", label: "Chat", icon: MessageSquare },
             { id: "resume", label: "Résumé", icon: AlignLeft },
-            { id: "quiz", label: "Quiz", icon: FileText },
+            { id: "quiz", label: "Quiz", icon: Brain },
           ].map((tab) => {
             const Icon = tab.icon;
             const active = mainTab === tab.id;
@@ -369,8 +451,6 @@ export default function App() {
             onGenerateQuiz={runQuiz}
           />
         )}
-    
-        
       </main>
     </div>
   );
