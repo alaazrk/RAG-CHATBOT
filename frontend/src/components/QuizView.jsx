@@ -2,6 +2,11 @@ import { useState } from "react";
 import { Brain, Loader2, CheckCircle, XCircle } from "lucide-react";
 import { colors } from "../config";
 
+function normalize(value) {
+  if (typeof value === "boolean") return value ? "vrai" : "faux";
+  return String(value ?? "").trim().toLowerCase();
+}
+
 export default function QuizView({
   selectedDoc,
   quiz,
@@ -71,7 +76,7 @@ export default function QuizView({
     let score = 0;
 
     quiz.questions.forEach((q, i) => {
-      if (answers[i] === q.answer) score++;
+      if (normalize(answers[i]) === normalize(q.answer)) score++;
     });
 
     return score;
@@ -99,7 +104,15 @@ export default function QuizView({
           </h2>
         </div>
 
-        {quiz.questions.map((q, index) => (
+        {quiz.questions.length === 0 && (
+          <p style={{ color: colors.textSecondary }} className="text-sm">
+            Aucune question n'a pu être générée pour ce document. Réessaie, ou vérifie qu'il est bien indexé.
+          </p>
+        )}
+
+        {quiz.questions.map((q, index) => {
+          const isCorrect = submitted && normalize(answers[index]) === normalize(q.answer);
+          return (
           <div
             key={index}
             className="mb-8"
@@ -112,7 +125,7 @@ export default function QuizView({
             </h3>
 
             {q.type === "mcq" &&
-              q.choices.map((choice) => (
+              q.choices?.map((choice) => (
                 <label
                   key={choice}
                   className="flex items-center gap-2 mb-2 cursor-pointer"
@@ -123,6 +136,7 @@ export default function QuizView({
                     name={`q-${index}`}
                     value={choice}
                     disabled={submitted}
+                    checked={answers[index] === choice}
                     onChange={() => handleChoice(index, choice)}
                   />
 
@@ -132,21 +146,23 @@ export default function QuizView({
 
             {q.type === "true_false" && (
               <>
-                <label className="flex gap-2 mb-2">
+                <label className="flex items-center gap-2 mb-2 cursor-pointer" style={{ color: colors.textSecondary }}>
                   <input
                     type="radio"
                     name={`q-${index}`}
-                    onChange={() => handleChoice(index, true)}
+                    checked={answers[index] === "vrai"}
+                    onChange={() => handleChoice(index, "vrai")}
                     disabled={submitted}
                   />
                   Vrai
                 </label>
 
-                <label className="flex gap-2">
+                <label className="flex items-center gap-2 cursor-pointer" style={{ color: colors.textSecondary }}>
                   <input
                     type="radio"
                     name={`q-${index}`}
-                    onChange={() => handleChoice(index, false)}
+                    checked={answers[index] === "faux"}
+                    onChange={() => handleChoice(index, "faux")}
                     disabled={submitted}
                   />
                   Faux
@@ -172,13 +188,13 @@ export default function QuizView({
             {submitted && (
               <div className="mt-3">
 
-                {answers[index] === q.answer ? (
-                  <div className="flex gap-2 text-green-400">
+                {isCorrect ? (
+                  <div className="flex items-center gap-2" style={{ color: colors.success }}>
                     <CheckCircle size={18} />
                     Bonne réponse
                   </div>
                 ) : (
-                  <div className="flex gap-2 text-red-400">
+                  <div className="flex items-center gap-2" style={{ color: colors.danger }}>
                     <XCircle size={18} />
                     Mauvaise réponse
                   </div>
@@ -201,9 +217,10 @@ export default function QuizView({
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
 
-        {!submitted && (
+        {!submitted && quiz.questions.length > 0 && (
           <button
             onClick={() => setSubmitted(true)}
             style={{

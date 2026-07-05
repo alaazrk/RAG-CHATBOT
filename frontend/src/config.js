@@ -2,54 +2,42 @@
 // CONFIGURATION — backend FastAPI (AI RAG Chatbot)
 // ============================================================
 
-export const API_BASE = "http://localhost:8000";
-
-/* =======================
-   Couleurs de l'application
-======================= */
-
 export const colors = {
-  bgApp: "#0A0A0E",
-  bgPanel: "#15151D",
-  bgPanelHover: "#1C1C26",
+  // Fond principal
+  bgApp: "#08080F",
 
-  border: "#232330",
+  // Cartes / panneaux
+  bgPanel: "#0F0F1A",
+  bgPanelHover: "#1A1A2E",
 
+  // Bordures
+  border: "rgba(255,255,255,0.07)",
+
+  // Couleurs principales
   accent: "#7C5CFC",
   accentHover: "#6D4CE0",
-  accentSoft: "rgba(124, 92, 252, 0.15)",
+  accentSoft: "rgba(124,92,252,0.15)",
 
-  textPrimary: "#F2F2F5",
-  textSecondary: "#9C9CAB",
-  textFaint: "#6B6B7B",
-  textLink: "#A78BFA",
+  // Accent secondaire (bleu)
+  accentBlue: "#5B8AF0",
 
-  danger: "#F87171",
+  // Texte
+  textPrimary: "#E8E8F0",
+  textSecondary: "#C0BFE8",
+  textFaint: "#6B6A8F",
+  textLink: "#7C5CFC",
 
-  // ✅ Couleurs Quiz
+  // Etats
   success: "#22C55E",
   warning: "#F59E0B",
   error: "#EF4444",
+  danger: "#EF4444",
+
+  // Sidebar
+  sidebar: "#0C0C18",
+  sidebarBorder: "rgba(255,255,255,0.06)",
 };
 
-/* =======================
-   Navigation principale
-======================= */
-
-export const TABS = [
-  {
-    id: "chat",
-    label: "Chat",
-  },
-  {
-    id: "resume",
-    label: "Résumé",
-  },
-  {
-    id: "quiz",
-    label: "Quiz",
-  },
-];
 
 /* =======================
    Utilitaires
