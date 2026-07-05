@@ -36,3 +36,18 @@ export async function summarizeDocument(filename) {
   if (!res.ok) throw new Error(`Summary failed (${res.status})`);
   return res.json();
 }
+
+export async function generateQuiz(filename) {
+  const res = await fetch(
+    `${API_BASE}/quiz/${encodeURIComponent(filename)}`,
+    {
+      method: "POST",
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error(`Quiz generation failed (${res.status})`);
+  }
+
+  return res.json();
+}

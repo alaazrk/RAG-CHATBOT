@@ -1,9 +1,6 @@
-import { Upload, Send, Loader2 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
-import "katex/dist/katex.min.css";
+import { Paperclip, Send, Loader2, Bot, User } from "lucide-react";
 import { colors } from "../config";
+import MarkdownText from "./MarkdownText";
 
 export default function ChatView({
   messages,
@@ -14,106 +11,106 @@ export default function ChatView({
   isSending,
   scrollRef,
   fileInputRef,
+  selectedDoc,
 }) {
   return (
     <>
-      <div className="flex items-center justify-between px-6 pt-6 pb-2">
-        <h1 style={{ color: colors.text }} className="text-2xl font-bold">
-          PDF Chat Assistant
-        </h1>
-
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          style={{
-            background: `linear-gradient(135deg, ${colors.accentDark}, ${colors.accent})`,
-            color: "white",
-          }}
-          className="flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold shadow-md hover:opacity-90 transition-opacity"
-        >
-          <Upload size={15} /> Upload PDF
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-3">
-        {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-            <div
-              className="max-w-[70%] flex flex-col"
-              style={{ alignItems: msg.role === "user" ? "flex-end" : "flex-start" }}
-            >
-              <div
-                style={{
-                  backgroundColor: msg.role === "user" ? colors.accent : colors.bubble,
-                  color: msg.role === "user" ? "white" : colors.text,
-                }}
-                className="rounded-2xl px-5 py-3.5 text-[15px] leading-relaxed shadow-sm markdown-bubble"
-              >
-                {msg.role === "assistant" ? (
-                  <ReactMarkdown
-                    remarkPlugins={[remarkMath]}
-                    rehypePlugins={[rehypeKatex]}
-                    components={{
-                      p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                      ul: ({ children }) => <ul className="list-disc pl-5 mb-2 flex flex-col gap-1">{children}</ul>,
-                      ol: ({ children }) => <ol className="list-decimal pl-5 mb-2 flex flex-col gap-1">{children}</ol>,
-                      strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
-                      code: ({ children }) => (
-                        <code
-                          style={{ backgroundColor: colors.bgGradTop }}
-                          className="px-1.5 py-0.5 rounded text-[13px] font-mono"
-                        >
-                          {children}
-                        </code>
-                      ),
-                      h1: ({ children }) => <h3 className="font-bold text-base mb-1.5 mt-1">{children}</h3>,
-                      h2: ({ children }) => <h3 className="font-bold text-base mb-1.5 mt-1">{children}</h3>,
-                      h3: ({ children }) => <h4 className="font-semibold text-sm mb-1 mt-1">{children}</h4>,
-                    }}
-                  >
-                    {msg.text}
-                  </ReactMarkdown>
-                ) : (
-                  <span className="whitespace-pre-wrap">{msg.text}</span>
-                )}
+      <div className="flex-1 overflow-y-auto min-h-0 px-6 py-5 flex flex-col gap-4">
+        {messages.map((msg, i) => {
+          const isUser = msg.role === "user";
+          return (
+            <div key={i} className={`flex items-start gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
+              {!isUser && (
+                <div
+                  style={{ backgroundColor: colors.accentSoft }}
+                  className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                >
+                  <Bot size={15} color={colors.accent} />
+                </div>
+              )}
+              <div className="max-w-[65%] flex flex-col" style={{ alignItems: isUser ? "flex-end" : "flex-start" }}>
+                <div
+                  style={{
+                    backgroundColor: colors.bgPanel,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.textPrimary,
+                  }}
+                  className="rounded-2xl px-4 py-3 text-[14px] leading-relaxed"
+                >
+                  {isUser ? (
+                    <span className="whitespace-pre-wrap">{msg.text}</span>
+                  ) : (
+                    <MarkdownText text={msg.text} />
+                  )}
+                </div>
+                <span style={{ color: colors.textFaint }} className="text-[11px] mt-1.5 px-1 font-mono">
+                  {msg.time}
+                </span>
               </div>
-              <span style={{ color: colors.textSoft }} className="text-[11px] mt-1 px-1">
-                {msg.time}
-              </span>
+              {isUser && (
+                <div
+                  style={{ backgroundColor: colors.accentSoft }}
+                  className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                >
+                  <User size={15} color={colors.accent} />
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
+
         {isSending && (
-          <div className="flex justify-start">
+          <div className="flex items-start gap-3 justify-start">
             <div
-              style={{ backgroundColor: colors.bubble, color: colors.textSoft }}
-              className="rounded-2xl px-5 py-3.5 text-sm flex items-center gap-2 shadow-sm"
+              style={{ backgroundColor: colors.accentSoft }}
+              className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
             >
-              <Loader2 size={14} className="animate-spin" /> Thinking…
+              <Bot size={15} color={colors.accent} />
+            </div>
+            <div
+              style={{ backgroundColor: colors.bgPanel, border: `1px solid ${colors.border}`, color: colors.textSecondary }}
+              className="rounded-2xl px-4 py-3 text-sm flex items-center gap-2"
+            >
+              <Loader2 size={14} className="animate-spin" /> Réflexion en cours…
             </div>
           </div>
         )}
         <div ref={scrollRef} />
       </div>
 
-      <div className="px-6 pb-6 pt-2">
-        <div style={{ backgroundColor: colors.bubble }} className="flex items-center gap-2 rounded-full px-5 py-2 shadow-sm">
+      <div className="px-6 pb-5 pt-2">
+        <div
+          style={{ backgroundColor: colors.bgPanel, border: `1px solid ${colors.border}` }}
+          className="flex items-center gap-3 rounded-2xl px-4 py-1"
+        >
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            style={{ color: colors.textFaint }}
+            className="hover:text-white transition-colors flex-shrink-0"
+            title="Importer un PDF"
+          >
+            <Paperclip size={17} />
+          </button>
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Ask a question about your PDF..."
-            style={{ color: colors.text }}
-            className="flex-1 bg-transparent text-sm py-2 focus:outline-none placeholder:text-gray-400"
+            placeholder={selectedDoc ? "Posez une question sur le document..." : "Importez un PDF pour commencer..."}
+            style={{ color: colors.textPrimary }}
+            className="flex-1 bg-transparent text-sm py-3 focus:outline-none"
           />
           <button
             onClick={sendMessage}
             disabled={!input.trim()}
             style={{ backgroundColor: colors.accent }}
-            className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 disabled:opacity-40 transition-opacity"
+            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 disabled:opacity-30 transition-opacity"
           >
-            <Send size={15} color="white" />
+            <Send size={14} color="white" />
           </button>
         </div>
+        <p style={{ color: colors.textFaint }} className="text-center text-[11px] mt-2.5">
+          Entrée pour envoyer · Maj+Entrée pour nouvelle ligne
+        </p>
       </div>
     </>
   );
