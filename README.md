@@ -46,6 +46,7 @@ PDFMind est une application web qui permet d'importer des documents PDF et d'int
 
 ## Architecture
 
+```
 Utilisateur
       │
       ▼
@@ -60,6 +61,8 @@ Backend (FastAPI)
       │
       ▼
 Réponse au Frontend
+```
+
 ## Prérequis
 
 - Python 3.11+
